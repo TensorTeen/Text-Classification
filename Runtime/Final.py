@@ -66,7 +66,7 @@ def trainer(NAME,EPOCHS,BATCHSIZE,train_data,test_data):
     model.save(f"saved_model/{NAME}")
 
 
-def review_encode(s):
+def review_encode(string:str):
     """Encodes the review string with the internal index
 
     Args:
@@ -76,7 +76,7 @@ def review_encode(s):
         List: Encoded message
     """
     encoded = [1]
-    for word in s:
+    for word in string:
         if word.lower() in word_index:
             encoded.append(word_index[word.lower()])
         else:
@@ -99,17 +99,17 @@ def testing_data(filepath=None,txt=None,Modelfile='saved_model\\my_model'):
     #loading the module from file
     model = keras.models.load_model(Modelfile)
 
-    #if filepath is given
-    if filepath is not None:
+    
+    if filepath is not None: #if filepath is given
         with open(filepath, encoding='utf-8') as f: #opening the txt file
             for line in f.readlines():
                 nline = line.replace(',','').replace('.','').replace('(','').replace(')','').replace(':','').replace('\"','').strip().split(' ')    #replacing unwanted characters
                 encode = review_encode(nline)   #encoding the txt with the word index
                 encode = keras.preprocessing.sequence.pad_sequences([encode], value=word_index["<PAD>"], padding='post', maxlen=250)
                 predict = model.predict(encode)     #predicting the result
-                s = f'Your Input line was:\n+{line}'
-                scr = f'Rating: {evaluvate(predict[0])} \n SCORE :{predict[0]}'
-                textbox(msg=scr,text=s)
+                string = f'Your Input line was:\n+{line}'
+                score = f'Rating: {evaluvate(predict[0])} \n SCORE :{predict[0]}'
+                textbox(msg=score,text=string)
         return 
 
 
@@ -118,8 +118,8 @@ def testing_data(filepath=None,txt=None,Modelfile='saved_model\\my_model'):
         encode = review_encode(nline)   #encoding the txt with the word index
         encode = keras.preprocessing.sequence.pad_sequences([encode], value=word_index["<PAD>"], padding='post', maxlen=250)
         predict = model.predict(encode) #predicting the result
-        s = f'Your Input line was:\n+{txt}'
-        return predict[0],s
+        string = f'Your Input line was:\n+{txt}'
+        return predict[0],string
 
 
 def choice_type():
@@ -200,16 +200,16 @@ def choice_train():
         function(optional): function for the next action as selected by the user
     """
     fieldNames = ['Name','Epochs','Batchsize']
-    a = multenterbox('Please enter the following data',fields=fieldNames)
-    if a is None:
+    data = multenterbox('Please enter the following data',fields=fieldNames)
+    if data is None:
         return
-    for i in a:
+    for i in data:
         if i.strip() == '':
-            ccbox(f'Please Give A Valid Input For {fieldNames[a.index(i)]}')
+            ccbox(f'Please Give A Valid Input For {fieldNames[data.index(i)]}')
             return choice_train()
-    a = list(a)
+    data = list(data)
     try:
-        trainer(a[0],int(a[1]),int(a[2]),train_data,test_data)
+        trainer(data[0],int(data[1]),int(data[2]),train_data,test_data)
         if ynbox('Succesfully Trained! Do You want to train more?') :
             return choice_train()
         else:
@@ -240,27 +240,45 @@ def evaluvate(scr):
 
 def login():
     fieldNames = ['Username','Password']
-    a = multpasswordbox(msg = 'Please Login with your Username and Password',title='Login',fields=fieldNames)
-    if a is None:
+    user_info = multpasswordbox(msg = 'Please Login with your Username and Password',title='Login',fields=fieldNames)
+    if user_info  is None:
         if ynbox('Invalid Input Do You Want To Try Again?'):
                 return login()
         else:
             exit()
-    user = a[0] 
-    passwd = a[1]
+    user,passwd = user_info
     cur.reset() 
     cur.execute(f'select * from users WHERE Name = "{user}" and pass = "{passwd}"')
-    d = list(cur)
-    if len(d) > 0 :
+    response = list(cur)
+    if len(response) > 0 :
         msgbox("Welcome")
         return main()
     else :
-        if ynbox('Password does not exits try again?'):
+        if ynbox('Password does not exists try login again ?'):
             return login()
+        elif ynbox('Password does not exists try registering ?'):
+           return register()
         else:
-           exit()     
+            exit()
 
+def register():
+    """It is the function that registers a user
 
+    """
+    fieldNames = ['Username','Password']
+    user_info = multpasswordbox(msg = 'Please Register your Username and Password',title='Register',fields=fieldNames)
+    if user_info  is None:
+        if ynbox('Invalid Input Do You Want To Try Again?'):
+                return register()
+        else:
+            exit()
+    user,passwd = user_info    
+    print(user,passwd)
+    cur.reset() 
+    cur.execute(f'INSERT INTO users VALUES("{user}","{passwd}")')
+    db.commit()
+    ccbox(msg='Registered ! Please login with your username and password')
+    return login()
 #running the main loop
 def main():
     """It is the main loop that runs the program
